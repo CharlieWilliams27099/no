@@ -12,6 +12,7 @@ let troopsToPlace = 3;
 const tiles = [];
 
 let selectedTile = null;
+let fortifyFrom = null;
 
 function createBoard() {
   for (let i = 0; i < totalTiles; i++) {
@@ -57,7 +58,7 @@ function handleClick(tile) {
       updateTile(tile);
       if (troopsToPlace === 0) {
         phase = "attack";
-        status.textContent = `Player ${currentPlayer} (${currentPlayer === 1 ? "🔴" : "🔵"}), click your tile then adjacent tile to act.`;
+        status.textContent = `Player ${currentPlayer === 1 ? "🔴" : "🔵"}: click your tile, then a target to attack or capture.`;
       }
     }
   }
@@ -66,12 +67,9 @@ function handleClick(tile) {
     if (!selectedTile && owner === currentPlayer && troops > 1) {
       selectedTile = tile;
       tile.style.outline = "2px solid yellow";
-    }
-    else if (selectedTile && tile !== selectedTile) {
+    } else if (selectedTile && tile !== selectedTile) {
       const fromIndex = parseInt(selectedTile.dataset.index);
       const toIndex = index;
-      const fromTroops = parseInt(selectedTile.dataset.troops);
-      const targetOwner = parseInt(tile.dataset.owner);
 
       if (!isAdjacent(fromIndex, toIndex)) {
         selectedTile.style.outline = "none";
@@ -79,23 +77,55 @@ function handleClick(tile) {
         return;
       }
 
-      if (targetOwner === 0 && fromTroops > 1) {
-        // Claim neutral land
-        selectedTile.dataset.troops = (fromTroops - 1).toString();
-        tile.dataset.troops = "1";
-        tile.dataset.owner = currentPlayer;
-        tile.className = `tile p${currentPlayer}`;
-        updateTile(selectedTile);
-        updateTile(tile);
-      }
+      const targetOwner = parseInt(tile.dataset.owner);
 
-      else if (targetOwner !== currentPlayer) {
+      if (targetOwner === 0 && parseInt(selectedTile.dataset.troops) > 1) {
+        tile.dataset.owner = currentPlayer;
+        tile.dataset.troops = "1";
+        tile.className = `tile p${currentPlayer}`;
+        selectedTile.dataset.troops = (parseInt(selectedTile.dataset.troops) - 1).toString();
+        updateTile(tile);
+        updateTile(selectedTile);
+      } else if (targetOwner !== currentPlayer) {
         resolveAttack(selectedTile, tile);
       }
 
       selectedTile.style.outline = "none";
       selectedTile = null;
       checkVictory();
+    }
+  }
+
+  else if (phase === "fortify") {
+    if (!fortifyFrom && owner === currentPlayer && troops > 1) {
+      fortifyFrom = tile;
+      tile.style.outline = "2px solid lime";
+    } else if (fortifyFrom && tile !== fortifyFrom) {
+      const fromIndex = parseInt(fortifyFrom.dataset.index);
+      const toIndex = index;
+
+      if (
+        isAdjacent(fromIndex, toIndex) &&
+        parseInt(tile.dataset.owner) === currentPlayer
+      ) {
+        const maxTransfer = parseInt(fortifyFrom.dataset.troops) - 1;
+        const transfer = parseInt(prompt(`Transfer how many troops? (1–${maxTransfer})`, "1"));
+        if (!isNaN(transfer) && transfer >= 1 && transfer <= maxTransfer) {
+          fortifyFrom.dataset.troops = (parseInt(fortifyFrom.dataset.troops) - transfer).toString();
+          tile.dataset.troops = (parseInt(tile.dataset.troops) + transfer).toString();
+          updateTile(fortifyFrom);
+          updateTile(tile);
+          fortifyFrom.style.outline = "none";
+          fortifyFrom = null;
+          phase = "end";
+          status.textContent = "Fortification complete. Press End Turn.";
+        } else {
+          alert("Invalid number.");
+        }
+      } else {
+        fortifyFrom.style.outline = "none";
+        fortifyFrom = null;
+      }
     }
   }
 }
@@ -112,9 +142,8 @@ function updateTile(tile) {
 }
 
 function resolveAttack(fromTile, toTile) {
-  let atk = parseInt(fromTile.dataset.troops);
-  let def = parseInt(toTile.dataset.troops);
-
+  const atk = parseInt(fromTile.dataset.troops);
+  const def = parseInt(toTile.dataset.troops);
   const atkRoll = Math.floor(Math.random() * atk);
   const defRoll = Math.floor(Math.random() * def);
 
@@ -123,8 +152,8 @@ function resolveAttack(fromTile, toTile) {
     toTile.dataset.troops = (atk - 1).toString();
     fromTile.dataset.troops = "1";
     toTile.className = `tile p${currentPlayer}`;
-    updateTile(fromTile);
     updateTile(toTile);
+    updateTile(fromTile);
   } else {
     fromTile.dataset.troops = (atk - 1).toString();
     updateTile(fromTile);
@@ -140,6 +169,9 @@ function checkVictory() {
   } else if (p2 === 0) {
     status.textContent = "🔴 Player 1 wins!";
     disableBoard();
+  } else if (phase === "attack") {
+    phase = "fortify";
+    status.textContent = `Optional: ${currentPlayer === 1 ? "🔴" : "🔵"} select a tile to move troops from.`;
   }
 }
 
@@ -149,12 +181,13 @@ function disableBoard() {
 }
 
 endTurn.addEventListener("click", () => {
-  if (phase === "attack") {
+  if (phase === "end" || phase === "attack") {
     currentPlayer = currentPlayer === 1 ? 2 : 1;
     phase = "reinforce";
     troopsToPlace = 3;
+    status.textContent = `Player ${currentPlayer === 1 ? "🔴" : "🔵"}: place 3 troops.`;
     selectedTile = null;
-    status.textContent = `Player ${currentPlayer} (${currentPlayer === 1 ? "🔴" : "🔵"}), place your 3 troops.`;
+    fortifyFrom = null;
   }
 });
 
