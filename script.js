@@ -41,7 +41,15 @@ function updateUI() {
   });
 
   fortifyBtn.style.display = (phase === "attack" && !hasFortified) ? "inline-block" : "none";
-  endTurn.disabled = !(phase === "reinforce" && troopsToPlace === 0 || phase === "fortify");
+
+  // Fix: Always allow ending turn during attack or fortify
+  if (phase === "reinforce") {
+    endTurn.disabled = (troopsToPlace > 0);
+  } else if (phase === "fortify" || phase === "attack") {
+    endTurn.disabled = false;
+  } else {
+    endTurn.disabled = true;
+  }
 }
 
 function handleClick(tile) {
@@ -74,7 +82,7 @@ function handleClick(tile) {
       if (troopsToPlace === 0) {
         phase = "attack";
         hasFortified = false;
-        status.textContent = `Player ${currentPlayer === 1 ? "🔴" : "🔵"}, attack or click 'Fortify' when ready.`;
+        status.textContent = `Player ${currentPlayer === 1 ? "🔴" : "🔵"}, attack when ready.`;
       }
       updateUI();
     }
@@ -94,11 +102,11 @@ function handleClick(tile) {
         return;
       }
 
-      if (owner === 0) {
+      if (owner === 0 && parseInt(selectedTile.dataset.troops) > 1) {
         selectedTile.dataset.troops--;
         tile.dataset.owner = currentPlayer;
         tile.dataset.troops = "1";
-      } else if (owner !== currentPlayer) {
+      } else if (owner !== currentPlayer && parseInt(selectedTile.dataset.troops) > 1) {
         const atk = parseInt(selectedTile.dataset.troops);
         const def = parseInt(tile.dataset.troops);
         const atkRoll = Math.floor(Math.random() * atk);
@@ -111,6 +119,8 @@ function handleClick(tile) {
           selectedTile.dataset.troops = (atk - 1).toString();
         }
       }
+
+      selectedTile.style.outline = "none";
       selectedTile = null;
       updateUI();
       checkVictory();
@@ -127,13 +137,14 @@ function handleClick(tile) {
       const i2 = index;
       if (isAdjacent(i1, i2)) {
         const max = parseInt(fortifySource.dataset.troops) - 1;
-        const amount = Math.min(1, max); // simple 1 troop move, can be upgraded later
+        const amount = Math.min(1, max);
         if (amount >= 1) {
           fortifySource.dataset.troops = (parseInt(fortifySource.dataset.troops) - amount).toString();
           tile.dataset.troops = (parseInt(tile.dataset.troops) + amount).toString();
           phase = "end";
-          fortifySource = null;
+          hasFortified = true;
           status.textContent = "Fortify complete. Click End Turn.";
+          fortifySource = null;
           updateUI();
         }
       } else {
@@ -182,8 +193,8 @@ endTurn.addEventListener("click", () => {
 
 fortifyBtn.addEventListener("click", () => {
   phase = "fortify";
-  hasFortified = true;
-  status.textContent = `Player ${currentPlayer === 1 ? "🔴" : "🔵"}: Select source tile to move troops from.`;
+  status.textContent = `Player ${currentPlayer === 1 ? "🔴" : "🔵"}: Select tile to move troops from.`;
+  updateUI();
 });
 
 createBoard();
