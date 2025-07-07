@@ -26,8 +26,11 @@ startGameBtn.addEventListener("click", () => {
   control[2] = player2Type.value;
   setupScreen.style.display = "none";
   gameUI.style.display = "block";
-  initGame();
+  requestAnimationFrame(() => {
+    initGame();
+  });
 });
+
 
 function initGame() {
   createBoard();
