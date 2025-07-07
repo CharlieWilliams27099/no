@@ -2,15 +2,38 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Two-Player Conquest: Fortify Update</title>
+  <title>Two-Player Strategy – Smart AI Mode</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1>Two-Player Conquest</h1>
-  <p id="status">Player 1 (🔴), select your capital.</p>
-  <div id="board"></div>
-  <button id="fortify">Fortify</button>
-  <button id="end-turn">End Turn</button>
+  <h1>🧠 Two-Player Conquest</h1>
+
+  <div id="setup-screen">
+    <h2>Select Player Types</h2>
+    <label>Player 1 (🔴):
+      <select id="player1-type">
+        <option value="human">Human</option>
+        <option value="ai">AI</option>
+      </select>
+    </label>
+    <br/>
+    <label>Player 2 (🔵):
+      <select id="player2-type">
+        <option value="human">Human</option>
+        <option value="ai">AI</option>
+      </select>
+    </label>
+    <br/><br/>
+    <button id="start-game">Start Game</button>
+  </div>
+
+  <div id="game-ui" style="display:none;">
+    <p id="status">Loading...</p>
+    <div id="board"></div>
+    <button id="fortify">Fortify</button>
+    <button id="end-turn">End Turn</button>
+  </div>
+
   <script src="script.js"></script>
 </body>
 </html>
