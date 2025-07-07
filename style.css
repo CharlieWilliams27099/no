@@ -44,3 +44,16 @@ body {
 #end-turn:hover {
   background-color: #388e3c;
 }
+#fortify, #end-turn {
+  padding: 10px 20px;
+  margin: 10px;
+  font-size: 1em;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+#fortify:hover, #end-turn:hover {
+  background-color: #388e3c;
+}
