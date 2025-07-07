@@ -36,7 +36,7 @@ function handleClick(tile) {
       tile.dataset.owner = currentPlayer;
       tile.dataset.troops = "5";
       tile.classList.add(`p${currentPlayer}`, "capital");
-      updateTileDisplay(tile);
+      updateTile(tile);
       capitalCount++;
       if (capitalCount === 2) {
         phase = "reinforce";
@@ -54,10 +54,10 @@ function handleClick(tile) {
     if (owner === currentPlayer && troopsToPlace > 0) {
       tile.dataset.troops = (troops + 1).toString();
       troopsToPlace--;
-      updateTileDisplay(tile);
+      updateTile(tile);
       if (troopsToPlace === 0) {
         phase = "attack";
-        status.textContent = `Player ${currentPlayer} (${currentPlayer === 1 ? "🔴" : "🔵"}), click your tile then adjacent land to act.`;
+        status.textContent = `Player ${currentPlayer} (${currentPlayer === 1 ? "🔴" : "🔵"}), click your tile then adjacent tile to act.`;
       }
     }
   }
@@ -70,21 +70,27 @@ function handleClick(tile) {
     else if (selectedTile && tile !== selectedTile) {
       const fromIndex = parseInt(selectedTile.dataset.index);
       const toIndex = index;
-
+      const fromTroops = parseInt(selectedTile.dataset.troops);
       const targetOwner = parseInt(tile.dataset.owner);
 
-      if (isAdjacent(fromIndex, toIndex)) {
-        if (targetOwner === 0) {
-          // Claim neutral land
-          tile.dataset.owner = currentPlayer;
-          tile.dataset.troops = "1";
-          tile.className = `tile p${currentPlayer}`;
-          selectedTile.dataset.troops = (parseInt(selectedTile.dataset.troops) - 1).toString();
-          updateTileDisplay(tile);
-          updateTileDisplay(selectedTile);
-        } else if (targetOwner !== currentPlayer) {
-          resolveAttack(selectedTile, tile);
-        }
+      if (!isAdjacent(fromIndex, toIndex)) {
+        selectedTile.style.outline = "none";
+        selectedTile = null;
+        return;
+      }
+
+      if (targetOwner === 0 && fromTroops > 1) {
+        // Claim neutral land
+        selectedTile.dataset.troops = (fromTroops - 1).toString();
+        tile.dataset.troops = "1";
+        tile.dataset.owner = currentPlayer;
+        tile.className = `tile p${currentPlayer}`;
+        updateTile(selectedTile);
+        updateTile(tile);
+      }
+
+      else if (targetOwner !== currentPlayer) {
+        resolveAttack(selectedTile, tile);
       }
 
       selectedTile.style.outline = "none";
@@ -100,8 +106,9 @@ function isAdjacent(i1, i2) {
   return (Math.abs(r1 - r2) + Math.abs(c1 - c2)) === 1;
 }
 
-function updateTileDisplay(tile) {
+function updateTile(tile) {
   tile.textContent = tile.dataset.troops;
+  if (tile.classList.contains("capital")) tile.classList.add("capital");
 }
 
 function resolveAttack(fromTile, toTile) {
@@ -113,15 +120,14 @@ function resolveAttack(fromTile, toTile) {
 
   if (atkRoll > defRoll) {
     toTile.dataset.owner = currentPlayer;
-    toTile.className = `tile p${currentPlayer}`;
     toTile.dataset.troops = (atk - 1).toString();
     fromTile.dataset.troops = "1";
-    if (fromTile.classList.contains("capital")) fromTile.classList.add("capital");
-    updateTileDisplay(toTile);
-    updateTileDisplay(fromTile);
+    toTile.className = `tile p${currentPlayer}`;
+    updateTile(fromTile);
+    updateTile(toTile);
   } else {
     fromTile.dataset.troops = (atk - 1).toString();
-    updateTileDisplay(fromTile);
+    updateTile(fromTile);
   }
 }
 
