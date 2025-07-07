@@ -46,96 +46,90 @@ document.addEventListener("DOMContentLoaded", () => {
     updateUI();
   }
 
-  function handleClick(tile) {
+   function handleClick(tile) {
     if (control[currentPlayer] !== "human") return;
     const owner = parseInt(tile.dataset.owner);
     const troops = parseInt(tile.dataset.troops);
     const index = parseInt(tile.dataset.index);
 
     if (phase === "capital" && owner === 0) {
-      claimCapital(tile);
-    } else if (phase === "reinforce" && owner === currentPlayer && troopsToPlace > 0) {
+      tile.dataset.owner = currentPlayer;
+      tile.dataset.troops = "5";
+      tile.classList.add(`p${currentPlayer}`, "capital");
+      capitalCount++;
+      if (capitalCount === 2) {
+        phase = "reinforce";
+        troopsToPlace = 3;
+        currentPlayer = 1;
+        status.textContent = "Player 1 (🔴), place your 3 troops.";
+        updateUI();
+        if (control[1] === "ai") setTimeout(aiTurn, 500);
+      } else {
+        currentPlayer = 2;
+        status.textContent = "Player 2 (🔵), select your capital.";
+      }
+      updateUI();
+    }
+
+    if (phase === "reinforce" && owner === currentPlayer && troopsToPlace > 0) {
       tile.dataset.troops = (troops + 1).toString();
       troopsToPlace--;
-    } else if (phase === "attack") {
+      if (troopsToPlace === 0) {
+        phase = "attack";
+        status.textContent = `Player ${currentPlayer === 1 ? "🔴" : "🔵"}: Attack or Fortify.`;
+        updateUI();
+      }
+    }
+
+    if (phase === "attack") {
       if (!selectedTile && owner === currentPlayer && troops > 1) {
         selectedTile = tile;
         tile.style.outline = "2px solid yellow";
       } else if (selectedTile && tile !== selectedTile) {
-        attemptAttack(selectedTile, tile);
+        const atk = parseInt(selectedTile.dataset.troops);
+        const def = parseInt(tile.dataset.troops);
+        const targetOwner = parseInt(tile.dataset.owner);
+        const fromIdx = parseInt(selectedTile.dataset.index);
+        const toIdx = parseInt(tile.dataset.index);
+
+        if (isAdjacent(fromIdx, toIdx)) {
+          if (targetOwner === 0 && atk > 1) {
+            selectedTile.dataset.troops = (atk - 1).toString();
+            tile.dataset.owner = currentPlayer;
+            tile.dataset.troops = "1";
+            tile.className = `tile p${currentPlayer}`;
+          } else if (targetOwner !== currentPlayer && atk > def) {
+            tile.dataset.owner = currentPlayer;
+            tile.dataset.troops = (atk - 1).toString();
+            selectedTile.dataset.troops = "1";
+            tile.className = `tile p${currentPlayer}`;
+          }
+        }
+
         selectedTile.style.outline = "none";
         selectedTile = null;
+        checkVictory();
+        updateUI();
       }
-    } else if (phase === "fortify") {
+    }
+
+    if (phase === "fortify") {
       if (!fortifySource && owner === currentPlayer && troops > 1) {
         fortifySource = tile;
         tile.style.outline = "2px solid lime";
       } else if (fortifySource && tile !== fortifySource && owner === currentPlayer) {
-        attemptFortify(fortifySource, tile);
+        const fromIdx = parseInt(fortifySource.dataset.index);
+        const toIdx = parseInt(tile.dataset.index);
+        if (isAdjacent(fromIdx, toIdx)) {
+          fortifySource.dataset.troops = (parseInt(fortifySource.dataset.troops) - 1).toString();
+          tile.dataset.troops = (parseInt(tile.dataset.troops) + 1).toString();
+          phase = "end";
+          status.textContent = "Fortify complete. Press End Turn.";
+        }
         fortifySource.style.outline = "none";
         fortifySource = null;
+        updateUI();
       }
-    }
-    updateUI();
-  }
-
-  function claimCapital(tile) {
-    tile.dataset.owner = currentPlayer;
-    tile.dataset.troops = "5";
-    tile.classList.add(`p${currentPlayer}`, "capital");
-    capitalCount++;
-    if (capitalCount === 2) {
-      phase = "reinforce";
-      troopsToPlace = 3;
-      currentPlayer = 1;
-      status.textContent = "Player 1 (🔴), place your 3 troops.";
-      updateUI();
-      if (control[currentPlayer] === "ai") aiTurn();
-    } else {
-      currentPlayer = 2;
-      status.textContent = "Player 2 (🔵), select your capital.";
-    }
-  }
-
-  function attemptAttack(from, to) {
-    const i1 = parseInt(from.dataset.index);
-    const i2 = parseInt(to.dataset.index);
-    if (!isAdjacent(i1, i2)) return;
-    const atkTroops = parseInt(from.dataset.troops);
-    const defTroops = parseInt(to.dataset.troops);
-    const defOwner = parseInt(to.dataset.owner);
-
-    if (defOwner === 0 && atkTroops > 1) {
-      from.dataset.troops = (atkTroops - 1).toString();
-      to.dataset.owner = currentPlayer;
-      to.dataset.troops = "1";
-      to.className = `tile p${currentPlayer}`;
-    } else if (defOwner !== currentPlayer && atkTroops > 1) {
-      const atkRoll = Math.floor(Math.random() * atkTroops);
-      const defRoll = Math.floor(Math.random() * defTroops);
-      if (atkRoll > defRoll) {
-        to.dataset.owner = currentPlayer;
-        to.dataset.troops = (atkTroops - 1).toString();
-        from.dataset.troops = "1";
-        to.className = `tile p${currentPlayer}`;
-      } else {
-        from.dataset.troops = (atkTroops - 1).toString();
-      }
-    }
-    checkVictory();
-  }
-
-  function attemptFortify(from, to) {
-    const i1 = parseInt(from.dataset.index);
-    const i2 = parseInt(to.dataset.index);
-    if (!isAdjacent(i1, i2)) return;
-    const ft = parseInt(from.dataset.troops);
-    if (ft > 1) {
-      from.dataset.troops = (ft - 1).toString();
-      to.dataset.troops = (parseInt(to.dataset.troops) + 1).toString();
-      phase = "end";
-      hasFortified = true;
-      status.textContent = "Fortify complete. Press End Turn.";
     }
   }
 
@@ -145,51 +139,29 @@ document.addEventListener("DOMContentLoaded", () => {
     return Math.abs(r1 - r2) + Math.abs(c1 - c2) === 1;
   }
 
-  function updateUI() {
-    tiles.forEach(tile => {
-      const owner = tile.dataset.owner;
-      tile.textContent = tile.dataset.troops;
-      tile.className = "tile";
-      if (owner === "1") tile.classList.add("p1");
-      if (owner === "2") tile.classList.add("p2");
-      if (tile.classList.contains("capital")) tile.classList.add("capital");
-      tile.style.outline = "none";
-    });
-
-    if (phase === "reinforce") {
-      endTurn.disabled = (troopsToPlace > 0);
-    } else if (["attack", "fortify", "end"].includes(phase)) {
-      endTurn.disabled = false;
-    } else {
-      endTurn.disabled = true;
-    }
-
-    fortifyBtn.style.display = (phase === "attack" && !hasFortified && control[currentPlayer] === "human")
-      ? "inline-block" : "none";
-
-    if (control[currentPlayer] === "ai") {
-      setTimeout(aiTurn, 200);
-    }
-  }
-
-  endTurn.addEventListener("click", () => {
+  function endHumanTurn() {
     currentPlayer = currentPlayer === 1 ? 2 : 1;
     troopsToPlace = 3;
-    phase = "reinforce";
-    selectedTile = null;
-    fortifySource = null;
     hasFortified = false;
-    status.textContent = `Player ${currentPlayer === 1 ? "🔴" : "🔵"}, place 3 troops.`;
+    fortifySource = null;
+    selectedTile = null;
+    phase = "reinforce";
+    status.textContent = `Player ${currentPlayer === 1 ? "🔴" : "🔵"}: place 3 troops.`;
     updateUI();
-  });
+    if (control[currentPlayer] === "ai") setTimeout(aiTurn, 500);
+  }
+
+  endTurn.addEventListener("click", endHumanTurn);
 
   fortifyBtn.addEventListener("click", () => {
-    phase = "fortify";
-    status.textContent = `Player ${currentPlayer === 1 ? "🔴" : "🔵"}: select tile to fortify from.`;
-    updateUI();
+    if (phase === "attack") {
+      phase = "fortify";
+      status.textContent = `Player ${currentPlayer === 1 ? "🔴" : "🔵"}: select tile to fortify from.`;
+      updateUI();
+    }
   });
 
-  function checkVictory() {
+   function checkVictory() {
     const p1 = tiles.filter(t => t.dataset.owner === "1").length;
     const p2 = tiles.filter(t => t.dataset.owner === "2").length;
     if (p1 === 0) {
@@ -207,4 +179,95 @@ document.addEventListener("DOMContentLoaded", () => {
     fortifyBtn.disabled = true;
   }
 
-  //
+  function aiTurn() {
+    if (phase === "capital") {
+      const neutral = tiles.filter(t => t.dataset.owner === "0");
+      const tile = neutral[Math.floor(Math.random() * neutral.length)];
+      tile.click();
+      return;
+    }
+
+    if (phase === "reinforce") {
+      const ownTiles = tiles.filter(t => t.dataset.owner === currentPlayer.toString());
+      const borderTiles = ownTiles.filter(t => {
+        const i = parseInt(t.dataset.index);
+        return tiles.some(n =>
+          isAdjacent(i, parseInt(n.dataset.index)) &&
+          n.dataset.owner !== t.dataset.owner
+        );
+      });
+      const reinforceTile = borderTiles[0] || ownTiles[0];
+      for (let i = 0; i < 3; i++) {
+        reinforceTile.dataset.troops = (parseInt(reinforceTile.dataset.troops) + 1).toString();
+      }
+      troopsToPlace = 0;
+      phase = "attack";
+      updateUI();
+      setTimeout(aiTurn, 300);
+      return;
+    }
+
+    if (phase === "attack") {
+      const attackers = tiles.filter(t =>
+        t.dataset.owner === currentPlayer.toString() &&
+        parseInt(t.dataset.troops) > 1
+      );
+      for (let a of attackers) {
+        const i = parseInt(a.dataset.index);
+        const neighbors = tiles.filter(n =>
+          isAdjacent(i, parseInt(n.dataset.index)) &&
+          n.dataset.owner !== a.dataset.owner
+        );
+        for (let t of neighbors) {
+          const atk = parseInt(a.dataset.troops);
+          const def = parseInt(t.dataset.troops);
+          if (atk > def || t.dataset.owner === "0") {
+            attemptAttack(a, t);
+            checkVictory();
+            updateUI();
+            setTimeout(aiTurn, 300);
+            return;
+          }
+        }
+      }
+      phase = "fortify";
+      updateUI();
+      setTimeout(aiTurn, 300);
+      return;
+    }
+
+    if (phase === "fortify") {
+      const ownTiles = tiles.filter(t => t.dataset.owner === currentPlayer.toString());
+      const safe = ownTiles.filter(t =>
+        parseInt(t.dataset.troops) > 1 &&
+        tiles.every(n =>
+          isAdjacent(parseInt(t.dataset.index), parseInt(n.dataset.index)) ?
+          n.dataset.owner === t.dataset.owner : true
+        )
+      );
+      const border = ownTiles.filter(t =>
+        tiles.some(n =>
+          isAdjacent(parseInt(t.dataset.index), parseInt(n.dataset.index)) &&
+          n.dataset.owner !== t.dataset.owner
+        )
+      );
+      if (safe.length && border.length) {
+        const from = safe[0];
+        const to = border.find(t =>
+          isAdjacent(parseInt(from.dataset.index), parseInt(t.dataset.index))
+        );
+        if (to) {
+          attemptFortify(from, to);
+          updateUI();
+          setTimeout(() => endTurn.click(), 300);
+          return;
+        }
+      }
+      phase = "end";
+      updateUI();
+      setTimeout(() => endTurn.click(), 300);
+    }
+  }
+});
+
+
