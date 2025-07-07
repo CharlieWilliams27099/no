@@ -103,3 +103,93 @@ function claimCapital(tile) {
 function attemptAttack(from, to) {
   const i1 = parseInt(from.dataset.index);
   const i2 = parseInt(to
+  if (phase === "reinforce") {
+    const ownTiles = tiles.filter(t => t.dataset.owner === currentPlayer.toString());
+    const borderTiles = ownTiles.filter(tile => {
+      const i = parseInt(tile.dataset.index);
+      return tiles.some(n => isAdjacent(i, parseInt(n.dataset.index)) && n.dataset.owner !== tile.dataset.owner);
+    });
+
+    const reinforceTile = borderTiles.sort((a, b) => parseInt(b.dataset.troops) - parseInt(a.dataset.troops))[0]
+                      || ownTiles[Math.floor(Math.random() * ownTiles.length)];
+
+    for (let i = 0; i < 3; i++) {
+      reinforceTile.dataset.troops = (parseInt(reinforceTile.dataset.troops) + 1).toString();
+    }
+
+    troopsToPlace = 0;
+    phase = "attack";
+    status.textContent = `AI Player ${currentPlayer} has reinforced.`;
+    updateUI();
+    return;
+  }
+
+  if (phase === "attack") {
+    const attackers = tiles.filter(t => t.dataset.owner === currentPlayer.toString() && parseInt(t.dataset.troops) > 1);
+    let didAttack = false;
+
+    for (let attacker of attackers) {
+      const i = parseInt(attacker.dataset.index);
+      const neighbors = tiles.filter(n => isAdjacent(i, parseInt(n.dataset.index)));
+
+      for (let target of neighbors) {
+        const targetOwner = parseInt(target.dataset.owner);
+        const atk = parseInt(attacker.dataset.troops);
+        const def = parseInt(target.dataset.troops);
+
+        if (targetOwner !== currentPlayer && targetOwner !== 0 && atk > def) {
+          attemptAttack(attacker, target);
+          didAttack = true;
+          break;
+        } else if (targetOwner === 0 && atk > 1) {
+          attemptAttack(attacker, target);
+          didAttack = true;
+          break;
+        }
+      }
+      if (didAttack) break;
+    }
+
+    if (!didAttack || Math.random() < 0.3) {
+      phase = hasFortified ? "end" : "fortify";
+      updateUI();
+    } else {
+      setTimeout(aiTurn, 300);
+    }
+    return;
+  }
+
+  if (phase === "fortify") {
+    const ownTiles = tiles.filter(t => t.dataset.owner === currentPlayer.toString());
+    const safeTiles = ownTiles.filter(t => {
+      const i = parseInt(t.dataset.index);
+      return tiles.every(n => isAdjacent(i, parseInt(n.dataset.index)) ? n.dataset.owner === t.dataset.owner : true);
+    }).filter(t => parseInt(t.dataset.troops) > 1);
+
+    const frontTiles = ownTiles.filter(t => {
+      const i = parseInt(t.dataset.index);
+      return tiles.some(n => isAdjacent(i, parseInt(n.dataset.index)) && n.dataset.owner !== t.dataset.owner);
+    });
+
+    if (safeTiles.length && frontTiles.length) {
+      const from = safeTiles[Math.floor(Math.random() * safeTiles.length)];
+      const iFrom = parseInt(from.dataset.index);
+      const neighbors = tiles.filter(t => frontTiles.includes(t) && isAdjacent(iFrom, parseInt(t.dataset.index)));
+      if (neighbors.length) {
+        const to = neighbors[0];
+        attemptFortify(from, to);
+      } else {
+        phase = "end";
+      }
+    } else {
+      phase = "end";
+    }
+
+    updateUI();
+    return;
+  }
+
+  if (phase === "end") {
+    setTimeout(() => endTurn.click(), 400);
+  }
+}
