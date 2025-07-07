@@ -31,20 +31,7 @@ body {
 .p2 { background-color: dodgerblue; color: white; }
 .capital { border: 2px solid gold; }
 
-#end-turn {
-  padding: 10px 20px;
-  margin-top: 10px;
-  font-size: 1em;
-  background-color: #4caf50;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-#end-turn:hover {
-  background-color: #388e3c;
-}
-#fortify, #end-turn {
+button {
   padding: 10px 20px;
   margin: 10px;
   font-size: 1em;
@@ -54,6 +41,13 @@ body {
   border-radius: 6px;
   cursor: pointer;
 }
-#fortify:hover, #end-turn:hover {
+
+button:hover {
   background-color: #388e3c;
+}
+
+select {
+  font-size: 1em;
+  padding: 5px;
+  margin-left: 5px;
 }
