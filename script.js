@@ -42,14 +42,15 @@ function updateUI() {
 
   fortifyBtn.style.display = (phase === "attack" && !hasFortified) ? "inline-block" : "none";
 
-  // ✅ Enables End Turn at correct times
-  if (phase === "reinforce") {
-    endTurn.disabled = (troopsToPlace > 0);
-  } else if (phase === "attack" || phase === "fortify") {
-    endTurn.disabled = false;
-  } else {
-    endTurn.disabled = true;
-  }
+ if (phase === "reinforce") {
+  endTurn.disabled = (troopsToPlace > 0);
+} else if (["attack", "fortify", "end"].includes(phase)) {
+  endTurn.disabled = false;
+} else {
+  endTurn.disabled = true;
+}
+ 
+
 }
 
 function handleClick(tile) {
